@@ -16,19 +16,30 @@ jobs:
       - name: Checkout main repo
         uses: actions/checkout@v4
 
-      - name: Clone wiki repo
+      - name: Check wiki draft folder
         run: |
-          git clone https://x-access-token:${{ github.token }}@github.com/LucasNoeller/HowToBelegarbeit.wiki.git wiki-repo
+          test -d wiki-draft || { echo "Missing wiki-draft/ folder"; exit 1; }
+
+      - name: Clone wiki repo
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN || github.token }}
+        run: |
+          git clone https://x-access-token:${WIKI_TOKEN}@github.com/LucasNoeller/HowToBelegarbeit.wiki.git wiki-repo
 
       - name: Mirror wiki files
         run: |
-          rsync -av --delete wiki-draft/ wiki-repo/
+          rsync -av --delete \
+            --exclude '.git/' \
+            wiki-draft/ wiki-repo/
 
       - name: Commit and push
+        env:
+          WIKI_TOKEN: ${{ secrets.WIKI_TOKEN || github.token }}
         run: |
           cd wiki-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${WIKI_TOKEN}@github.com/LucasNoeller/HowToBelegarbeit.wiki.git
           git add -A
-          git commit -m "Sync wiki content from main repo" || echo "No changes to commit"
-          git push
+          git commit -m "Sync wiki content from main repo" || { echo "No changes to commit"; exit 0; }
+          git push origin master
