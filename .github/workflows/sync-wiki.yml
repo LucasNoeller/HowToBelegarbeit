@@ -4,8 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [ main ]
-    paths:
-      - "wiki-draft/**"
 
 permissions:
   contents: write
@@ -22,15 +20,15 @@ jobs:
         run: |
           git clone https://x-access-token:${{ github.token }}@github.com/LucasNoeller/HowToBelegarbeit.wiki.git wiki-repo
 
-      - name: Copy wiki files
+      - name: Mirror wiki files
         run: |
-          cp -v wiki-draft/*.md wiki-repo/
+          rsync -av --delete wiki-draft/ wiki-repo/
 
       - name: Commit and push
         run: |
           cd wiki-repo
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Initial wiki content" || echo "No changes to commit"
+          git add -A
+          git commit -m "Sync wiki content from main repo" || echo "No changes to commit"
           git push
